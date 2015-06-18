@@ -1,0 +1,44 @@
+---
+title: "Severe Weather Events and his impact on USA"
+author: "Carlos Pinilla"
+date: "Wednesday, June 17, 2015"
+output: html_document
+---
+
+## Synopsis
+
+This article has the aim to evidence, on the basis of an official publication of the National Oceanic Atmospheric Administration (NOAA), called Storm Data 
+published on August 17, 2007, which are types of natural disasters that has suffered the United States and has had the worst consequenses respect to population health and economics.
+The results shows that.....
+To guide the lector to the description of the analisys performed, below will find the logics steps followed to achieve the results indicated.
+
+## Data Procesising
+
+### Libraries ang general setup
+
+```{r}
+echo = FALSE  # Avoid the warning message of library and versions
+library(ggplot2)
+library(plyr)
+```
+
+### Download the data from the NOAA 
+
+The data can be downloaded from the following link [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) 
+
+```{r, echo=TRUE}
+setwd("D:/cpinilla/personal/DataScientific/Reproducible_Research/Assessment2")
+if ( !"stormData.csv.bz2" %in% dir()){
+        print("Let me download the file")
+        download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile = "stormData.csv.bz2")}
+if (!"StormData" %in% ls()){
+        print("Loading the data")
+        StormData <- read.csv("stormData.csv.bz2")}
+```
+
+### Data procesing
+
+The first warnin we have about the data is that the earlier data is not complete for that reason we will try to figure out since when we will take the information in order to deliver a confident report.
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
