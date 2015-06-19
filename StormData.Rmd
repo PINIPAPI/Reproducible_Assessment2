@@ -27,7 +27,7 @@ library(plyr)
 The data can be downloaded from the following link [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) 
 
 ```{r, echo=TRUE}
-setwd("D:/cpinilla/personal/DataScientific/Reproducible_Research/Assessment2")
+wd <- setwd("D:/cpinilla/personal/DataScientific/Reproducible_Research/Assessment2")
 if ( !"stormData.csv.bz2" %in% dir()){
         print("Let me download the file")
         download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile = "stormData.csv.bz2")}
@@ -38,7 +38,74 @@ if (!"StormData" %in% ls()){
 
 ### Data procesing
 
-The first warnin we have about the data is that the earlier data is not complete for that reason we will try to figure out since when we will take the information in order to deliver a confident report.
+Analizing all the event type, there are many cases disgregated by the spelling (i.e Cold,cold,Cold) or for likely events (i.e Cold, frezzeng, hypotermia) So first it will be agregated a column with a key word that group all the cases in the likely and misspelling events
+```{r, echo=TRUE}
+StormData[grepl("precipitation|rain|hail|drizzle|wet|percip|burst|depression|fog|wall cloud",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "PRECIPITATION"
+StormData[grepl("wind|storm|wnd|hurricane|typhoon|torn|spout|funnel|whirlwind",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "TORNADO"
+StormData[grepl("slide|erosion|slump",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "EROSION"
+StormData[grepl("warmth|warm|heat|dry|hot|drought|hyperthermia|temperature record|record temperature|record high",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "HEAT"
+StormData[grepl("cold|cool|ice|icy|frost|freeze|snow|winter|wintry|wintery|blizzard|chill|freezing|avalanche|glaze|sleet|hypo",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "COLD"
+StormData[grepl("floo|surf|blow-out|swells|fld|dam break",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "FLOOD"
+StormData[grepl("seas|high water|tide|tsunami|wave|current|marine|drowning",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "SEAS"
+StormData[grepl("dust|saharan",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "DUST"
+StormData[grepl("tstm|thunderstorm|lightning",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "THUNDER"
+StormData[grepl("fire|smoke|volcanic",StormData$EVTYPE, ignore.case = TRUE), "GROUP.EVENT"] <- "FIRE"
+```
 
+The two main question this article wants to address are:
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+2. Across the United States, which types of events have the greatest economic consequences?
+
+So after revise the data  structure of the NOAA report, it were selected 9 variables from 38. The variables are:
+
++BGN_DATE  : Date when was register the ocurrence of the event.
++EVTYPE    : Which type of event occours
++GROUP.EVENT: Group all similar events
++FATALITIES: Number of deseases
++INJURIES  : Number of injuries
++PROPDMG   : Property damage estimates
++PROPDMGEXP: Alphabetical characters used to signify magnitude (i.e K = 1000)
++CROPDMG   : Crop damage estimates
++CROPDMGEXP: Alphabetical characters used to signify magnitude (i.e K = 1000)
+
+```{r, echo=TRUE}
+Variables.used <- c("BGN_DATE", "EVTYPE","GROUP.EVENT", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+  StormData <- StormData[, Variables.used]
+```
+
+Now it will be obteined the events which has reported the maximun number of fatalities and Injuries
+```{r, echo=TRUE}
+Colum.Fatal <- which(colnames(StormData) == "FATALITIES")
+Fatal.sum <- aggregate(StormData[, Colum.Fatal], by = list(StormData$GROUP.EVENT), FUN = "sum")
+Fatal.sum <- Fatal.sum[order(-Fatal.sum$x),]
+graph <- ggplot(Fatal.sum,aes(Fatal.sum$Group.1,x))
+graph + geom_bar(stat="identity") + ggtitle("Top 10 Event Types with max fatalities")
+Colum.INJUR <- which(colnames(StormData) == "INJURIES")
+INJUR.sum <- aggregate(StormData[, Colum.INJUR], by = list(StormData$GROUP.EVENT), FUN = "sum")
+INJUR.sum <- INJUR.sum[order(-INJUR.sum$x),]
+graph <- ggplot(INJUR.sum,aes(INJUR.sum$Group.1,x))
+graph + geom_bar(stat="identity") + ggtitle("Top 10 Event Types with max INJURES")
+```
+
+For summarize de amount in US dollars, we have to translate the PROPDMGEXP and CROPDMGEXP
+```{r, echo=TRUE}
+StormData$PROPDMGEXP <- as.character(storm.damage$PROPDMGEXP)
+StormData$CROPDMGEXP <- as.character(storm.damage$CROPDMGEXP)
+# A function to convert K, M, B units in --EXP columns
+Translate <- function(x){
+  x[x=="K"] <- "1000"
+  x[x=="k"] <- "1000"
+  x[x=="M"] <- "1000000"
+  x[x=="m"] <- "1000000"
+  x[x=="B"] <- "1000000000"
+  return(as.numeric(x))
+}
+
+StormData$PROPDMGEXP <- Translate(StormData$PROPDMGEXP)
+StormData$CROPDMGEXP <- Translate(StormData$CROPDMGEXP)
+
+StormData <- mutate(StormData, Total.Damage=PROPDMG*PROPDMGEXP+CROPDMG*CROPDMGEXP)
+
+```
